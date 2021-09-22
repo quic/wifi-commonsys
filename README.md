@@ -14,11 +14,11 @@ In current case we are using this application to collect CSI data and save into 
 
 To use this APK below are the libs, permission files and the QtiWifiservice shall be added to the device through the build using manifest file.
 
-[QtiWifiService,
-android.hardware.wifi.supplicant-V1.0-java,
-android.hardware.wifi.supplicant-V1.1-java,
-android.hardware.wifi.supplicant-V1.2-java,
-android.hardware.wifi.supplicant-V1.3-java,
-android.hidl.base-V1.0-java,
-android.hidl.manager-V1.0-java,
-qti_supplicant_interface.xml(permission file)]
+- [QtiWifiService]
+- [android.hardware.wifi.supplicant-V1.0-java]
+- [android.hardware.wifi.supplicant-V1.1-java]
+- [android.hardware.wifi.supplicant-V1.2-java]
+- [android.hardware.wifi.supplicant-V1.3-java]
+- [android.hidl.base-V1.0-java]
+- [android.hidl.manager-V1.0-java]
+- [qti_supplicant_interface.xml(permission file)]
