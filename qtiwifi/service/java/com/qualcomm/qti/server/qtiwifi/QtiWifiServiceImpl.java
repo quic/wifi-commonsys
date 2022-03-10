@@ -54,7 +54,6 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     private WifiManager mWifiManager;
 
     private final Context mContext;
-    private Context mServiceContext = null;
     private Object mLock = new Object();
     private final IntentFilter mQtiIntentFilter;
 
@@ -64,13 +63,6 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     public QtiWifiServiceImpl(Context context) {
         Log.d(TAG, "QtiWifiServiceImpl ctor");
         mContext = context;
-        if (mServiceStarted == false) {
-            mServiceContext = context;
-            Intent serviceIntent = new Intent(context, QtiWifiService.class);
-            context.startForegroundService(serviceIntent);
-            Log.d(TAG, "QtiWifiService has started");
-            mServiceStarted = true;
-        }
         mQtiIntentFilter = new IntentFilter("android.net.wifi.supplicant.STATE_CHANGE");
         mQtiIntentFilter.addAction("android.net.wifi.WIFI_STATE_CHANGED");
         mContext.registerReceiver(mQtiReceiver, mQtiIntentFilter);

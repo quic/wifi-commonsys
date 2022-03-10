@@ -61,28 +61,7 @@ public final class QtiWifiService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand()");
-
-        Notification.Builder nb = new Notification.Builder(
-                getApplicationContext())
-            .setContentTitle(getResources().getString(R.string.notif_title))
-            .setContentText(getResources().getString(R.string.notif_text))
-            .setSmallIcon(R.mipmap.icon);
-            nb.setChannelId(createNotificationChannel(TAG,
-                    getResources().getString(R.string.channel_name))
-                    .getId());
-        startForeground(Process.myPid(), nb.build());
         return super.onStartCommand(intent, flags, startId);
-    }
-
-    private NotificationChannel createNotificationChannel(
-            String channelId, String channelName){
-        Log.d(TAG, "createNotificationChannel called");
-        NotificationChannel channel = new NotificationChannel(channelId,
-                channelName, NotificationManager.IMPORTANCE_NONE);
-        NotificationManager service = (NotificationManager)
-            getSystemService(Context.NOTIFICATION_SERVICE);
-        service.createNotificationChannel(channel);
-        return channel;
     }
 
     @Override
