@@ -35,7 +35,10 @@ package com.qualcomm.qti.server.qtiwifi;
 
 import android.content.Context;
 import android.os.Binder;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.SystemProperties;
 import android.util.Log;
 import android.net.wifi.WifiManager;
@@ -57,15 +60,26 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     private Object mLock = new Object();
     private final IntentFilter mQtiIntentFilter;
 
+    private HandlerThread mHandlerThread = null;
+    private Handler mHandler = null;
+    private QtiWifiThreadRunner mQtiWifiThreadRunner = null;
+
     QtiWifiCsiHal qtiWifiCsiHal;
     QtiSupplicantStaIfaceHal qtiSupplicantStaIfaceHal;
 
     public QtiWifiServiceImpl(Context context) {
         Log.d(TAG, "QtiWifiServiceImpl ctor");
         mContext = context;
-        mQtiIntentFilter = new IntentFilter("android.net.wifi.supplicant.STATE_CHANGE");
-        mQtiIntentFilter.addAction("android.net.wifi.WIFI_STATE_CHANGED");
+
+        mQtiIntentFilter = new IntentFilter();
+        mQtiIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
         mContext.registerReceiver(mQtiReceiver, mQtiIntentFilter);
+
+        mHandlerThread = new HandlerThread("QtiWifiHandlerThread");
+        mHandlerThread.start();
+        mHandler = new Handler(mHandlerThread.getLooper());
+        mQtiWifiThreadRunner = new QtiWifiThreadRunner(mHandler);
+
         mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         if (mWifiManager.isWifiEnabled()) {
             Log.d(TAG, "isWifiEnabled true");
@@ -126,7 +140,8 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         if (DBG) {
             Log.i(TAG, "registerCsiCallback uid=%" + Binder.getCallingUid());
         }
-        qtiWifiCsiHal.registerCsiCallback(binder, callback, callbackIdentifier);
+        mQtiWifiThreadRunner.run(() ->
+            qtiWifiCsiHal.registerCsiCallback(binder, callback, callbackIdentifier));
     }
 
     @Override
@@ -135,7 +150,8 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         if (DBG) {
             Log.i(TAG, "unregisterCsiCallback uid=%" + Binder.getCallingUid());
         }
-        qtiWifiCsiHal.unregisterCsiCallback(callbackIdentifier);
+        mQtiWifiThreadRunner.run(() ->
+            qtiWifiCsiHal.unregisterCsiCallback(callbackIdentifier));
     }
 
     /**
@@ -144,8 +160,9 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     public void startCsi() {
         enforceChangePermission();
         Log.i(TAG, "startCsi");
-        qtiWifiCsiHal.startCsi();
-        qtiSupplicantStaIfaceHal.doDriverCmd("CSI start 0");
+        mQtiWifiThreadRunner.run(() -> qtiWifiCsiHal.startCsi());
+        mQtiWifiThreadRunner.run(() -> qtiSupplicantStaIfaceHal.doDriverCmd(
+				"CSI start 0"));
     }
 
     /**
@@ -154,17 +171,18 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     public void stopCsi() {
         enforceChangePermission();
         Log.i(TAG, "stopCsi");
-        qtiSupplicantStaIfaceHal.doDriverCmd("CSI stop");
-        qtiWifiCsiHal.stopCsi();
+        mQtiWifiThreadRunner.run(() -> qtiSupplicantStaIfaceHal.doDriverCmd(
+				"CSI stop"));
+        mQtiWifiThreadRunner.run(() -> qtiWifiCsiHal.stopCsi());
     }
 
     private void enforceAccessPermission() {
-        mContext.enforceCallingOrSelfPermission(android.Manifest.permission.ACCESS_WIFI_STATE,
-                "QtiWifiServiceImpl");
+        mContext.enforceCallingOrSelfPermission(
+            android.Manifest.permission.ACCESS_WIFI_STATE, TAG);
     }
 
     private void enforceChangePermission() {
-        mContext.enforceCallingOrSelfPermission(android.Manifest.permission.CHANGE_WIFI_STATE,
-                "QtiWifiServiceImpl");
+        mContext.enforceCallingOrSelfPermission(
+            android.Manifest.permission.CHANGE_WIFI_STATE, TAG);
     }
 }
