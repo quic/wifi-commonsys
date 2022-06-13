@@ -13,7 +13,8 @@ android_app {
                  "vendor.qti.hardware.wifi.wificfr-V1.0-java",
                  "vendor.qti.hardware.wifi.supplicant-V2.0-java",
                  "vendor.qti.hardware.wifi.supplicant-V2.1-java",
-                 "vendor.qti.hardware.wifi.supplicant-V2.2-java"
+                 "vendor.qti.hardware.wifi.supplicant-V2.2-java",
+                 "vendor.qti.hardware.wifi.supplicant-V1-java"
                  ],
     libs: [
           "android.hardware.wifi.supplicant-V1.0-java",

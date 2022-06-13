@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
  * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -99,7 +100,10 @@ public class QtiSupplicantStaIfaceHal {
      */
     private IQtiSupplicantStaIfaceHal createVendorStaIfaceHalMockable() {
         synchronized (mLock) {
-            if (QtiSupplicantStaIfaceHalHidlImpl.serviceDeclared()) {
+            if (QtiSupplicantStaIfaceHalAidlImpl.serviceDeclared()) {
+                Log.i(TAG, "Initializing QtiSupplicantStaIfaceHal using AIDL implementation.");
+                return new QtiSupplicantStaIfaceHalAidlImpl();
+            } else if (QtiSupplicantStaIfaceHalHidlImpl.serviceDeclared()) {
                 Log.i(TAG, "Initializing QtiSupplicantStaIfaceHal using HIDL implementation.");
                 return new QtiSupplicantStaIfaceHalHidlImpl();
             }
