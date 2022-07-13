@@ -135,7 +135,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
                     } catch (Exception e) {
                         Log.e(TAG, "Failed to open file");
                     }
-                    mUniqueInstance.doDriverCmd("CSI start 0");
                 }
             } else {
                 showMessage("uniqueInstance is null");
@@ -145,7 +144,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
             //stopping service
             if (mUniqueInstance != null) {
                 showMessage("CSI stop");
-                mUniqueInstance.doDriverCmd("CSI stop");
                 mUniqueInstance.stopCsi(mCsiCallback);
                 try {
                     outputWriter.close();

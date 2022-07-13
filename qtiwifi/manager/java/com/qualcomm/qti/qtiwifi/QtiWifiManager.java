@@ -152,7 +152,7 @@ public class QtiWifiManager {
         }
     }
 
-    public void registerCsiCallback(CsiCallback callback, Handler handler) {
+    private void registerCsiCallback(CsiCallback callback, Handler handler) {
         if (callback == null) throw new IllegalArgumentException("callback cannot be null");
         Log.v(TAG, "registerCsiCallback: callback=" + callback + ", handler=" + handler);
 
@@ -173,25 +173,12 @@ public class QtiWifiManager {
      * @param callback Callback to unregister for csi events
      *
      */
-    public void unregisterCsiCallback(CsiCallback callback) {
+    private void unregisterCsiCallback(CsiCallback callback) {
         if (callback == null) throw new IllegalArgumentException("callback cannot be null");
         Log.v(TAG, "unregisterCsiCallback: callback=" + callback);
 
         try {
             mService.unregisterCsiCallback(callback.hashCode());
-        } catch (RemoteException e) {
-            throw e.rethrowFromSystemServer();
-        }
-    }
-
-    /**
-     * Run driver command from user space
-     */
-    public void doDriverCmd(String command)
-    {
-        try {
-            mService.doDriverCmd(command);
-            return;
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -209,13 +196,13 @@ public class QtiWifiManager {
     }
 
     public boolean stopCsi(CsiCallback callback) {
-        unregisterCsiCallback(callback);
         try {
             mService.stopCsi();
-            return true;
         } catch (RemoteException e) {
             Log.e(TAG, "stopCsi: " + e);
             return false;
         }
+        unregisterCsiCallback(callback);
+        return true;
     }
 }

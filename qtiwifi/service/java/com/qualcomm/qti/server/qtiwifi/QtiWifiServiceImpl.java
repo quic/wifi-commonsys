@@ -120,7 +120,7 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         }
     };
 
-    //@Override
+    @Override
     public void registerCsiCallback(IBinder binder, ICsiCallback callback,
             int callbackIdentifier) {
         // verify arguments
@@ -137,20 +137,13 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         qtiWifiCsiHal.registerCsiCallback(binder, callback, callbackIdentifier);
     }
 
-    //@Override
+    @Override
     public void unregisterCsiCallback(int callbackIdentifier) {
         enforceAccessPermission();
         if (DBG) {
             Log.i(TAG, "unregisterCsiCallback uid=%" + Binder.getCallingUid());
         }
         qtiWifiCsiHal.unregisterCsiCallback(callbackIdentifier);
-    }
-
-    @Override
-    public void doDriverCmd(String command)
-    {
-        qtiSupplicantStaIfaceHal.doDriverCmd(command);
-        return;
     }
 
     /**
@@ -160,6 +153,7 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         enforceChangePermission();
         Log.i(TAG, "startCsi");
         qtiWifiCsiHal.startCsi();
+        qtiSupplicantStaIfaceHal.doDriverCmd("CSI start 0");
     }
 
     /**
@@ -168,6 +162,7 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     public void stopCsi() {
         enforceChangePermission();
         Log.i(TAG, "stopCsi");
+        qtiSupplicantStaIfaceHal.doDriverCmd("CSI stop");
         qtiWifiCsiHal.stopCsi();
     }
 
