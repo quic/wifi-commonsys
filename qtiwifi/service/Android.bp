@@ -49,6 +49,7 @@ android_app {
            "java/com/qualcomm/qti/server/qtiwifi/QtiWifiService.java",
            "java/com/qualcomm/qti/server/qtiwifi/QtiWifiThreadRunner.java",
            "java/com/qualcomm/qti/server/qtiwifi/QtiWifiServiceImpl.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiWifiHandler.java",
            "java/com/qualcomm/qti/server/qtiwifi/util/GeneralUtil.java",
           ],
     resource_dirs: ["res"],

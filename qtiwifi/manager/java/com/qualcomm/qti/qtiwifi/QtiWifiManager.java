@@ -43,10 +43,33 @@ import android.util.Log;
 import android.content.ServiceConnection;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import java.util.List;
-
 import com.qualcomm.qti.qtiwifi.ThermalData;
 
+/**
+ * This Class provides few aspects of managing Wi-Fi specific operation after Wi-Fi is turned on (Wi-Fi modules are initialized).
+ * This is primarily to be used by privileged/OEM application with "com.qualcomm.permission.QTI_WIFI" permission.
+ *
+ * How to use QtiWifiManager from external application:
+ *  1. Import WiFiManager and QtiWifiManager
+ *      import android.net.wifi.WifiManager;
+ *      import com.qualcomm.qti.qtiwifi.QtiWifiManager;
+ *  2. Create an ApplicationBinder context with QtiWifiManager.
+ *      private QtiWifiManager.ApplicationBinderCallback mApplicationCallback
+ *               = new QtiWifiManager.ApplicationBinderCallback() {
+ *               @Override
+ *               public void onAvailable(QtiWifiManager qtiWifiManager) {
+ *                               mUniqueInstance = qtiWifiManager;
+ *               }
+ *      };
+ *
+ *  3. while doing onCreate() for application initialize QtiWifiManager:
+ *      QtiWifiManager.initialize(this, mApplicationCallback);
+ *
+ *  4. To destroy the service while APK is killed:
+ *      QtiWifiManager.unbindService(context);
+ */
 public class QtiWifiManager {
     private static final String TAG = "QtiWifiManager";
     private static ApplicationBinderCallback mApplicationCallback = null;
@@ -61,6 +84,17 @@ public class QtiWifiManager {
         Log.i(TAG, "QtiWifiManager created");
     }
 
+    /**
+     * API to initialize QtiWifiManager.
+     * This is an entry point for using QtiWifiManager.
+     * To initialize and get the instance of QtiWifiManager, caller need to pass
+     * the QtiWifiManager.ApplicationBinderCallback instance.
+     * QtiWifiManager instance is received via ApplicationBinderCallback.onAvailable()
+     *
+     * @param context the application context
+     * @param cb ApplicationBinderCallback
+     *
+     */
     public static void initialize(Context context, ApplicationBinderCallback cb) {
         try {
             bindService(context);
@@ -84,6 +118,14 @@ public class QtiWifiManager {
         }
     }
 
+    /**
+     * API to destroy the service while APK is killed.
+     * To remove/delete the QtiWifiManager instance.
+     * This is usually done when Application no longer want to use QtiWifiManager.
+     *
+     * @param context the application context
+     *
+     */
     public static void unbindService(Context context) {
         if(mServiceAlreadyBound) {
             context.unbindService(mConnection);
@@ -119,6 +161,10 @@ public class QtiWifiManager {
         }
     }
 
+    /**
+     * Base class for Application binder callback
+     *
+     */
     public interface ApplicationBinderCallback {
         public abstract void onAvailable(QtiWifiManager manager);
     }
@@ -222,9 +268,41 @@ public class QtiWifiManager {
 
     /**
      * Callback proxy for CsiCallback objects.
+     * Base class for Qti interface callbacks . Should be extended by applications and set when calling
+     * {@link QtiWifiManager#registerCallback(QtiInterfaceCallback, Handler)}.
      *
      */
+    public interface QtiInterfaceCallback {
 
+        /**
+         * Used to indicate the disconnection from the currently connected
+         * network on this interface.
+         *
+         * @param bssid BSSID of the AP from which we disconnected.
+         * @param locallyGenerated If the disconnect was triggered by
+         *        wpa_supplicant.
+         * @param reasonCode 802.11 code to indicate the disconnect reason
+         *        from access point. Refer to section 8.4.1.7 of IEEE802.11 spec.
+         *
+         */
+        public abstract void onNetworkDisconnect(byte[] bssid, int reasonCode, boolean locallyGenerated);
+
+        /**
+         * Callback indicating that the chip has encountered a fatal error.
+         * These alerts notify the clients about any fatal error events
+         * that the chip encounters.
+         *
+         * @param errorCode Vendor defined error code.
+         * @param buffer Vendor defined data used for debugging.
+         *
+         */
+        public abstract void onWifiAlert(int errorCode, byte[] buffer);
+    }
+
+    /**
+     * Callback proxy for CsiCallback objects.
+     *
+     */
     private static class CsiCallbackProxy extends ICsiCallback.Stub {
         private final Handler mHandler;
         private final CsiCallback mCallback;
@@ -242,6 +320,46 @@ public class QtiWifiManager {
         }
     }
 
+    /**
+     * Callback proxy for QtiInterfaceCallback objects.
+     *
+     */
+    private static class QtiInterfaceCallbackProxy extends IQtiInterfaceCallback.Stub {
+        private final Handler mHandler;
+        private final QtiInterfaceCallback mCallback;
+
+        QtiInterfaceCallbackProxy(Looper looper, QtiInterfaceCallback callback) {
+            mHandler = new Handler(looper);
+            mCallback = callback;
+        }
+
+        @Override
+        public void onNetworkDisconnect(byte[] bssid, int reasonCode, boolean locallyGenerated) throws RemoteException {
+            mHandler.post(() -> {
+                mCallback.onNetworkDisconnect(bssid, reasonCode, locallyGenerated);
+            });
+       }
+
+        @Override
+        public void onWifiAlert(int errorCode, byte [] buffer) throws RemoteException {
+            mHandler.post(() -> {
+                mCallback.onWifiAlert(errorCode, buffer);
+            });
+
+        }
+    }
+
+    /**
+     * Registers a callback for csi events.
+     * Caller can unregister a previously registered callback using
+     * {@link #unregisterCsiCallback(CsiCallback)}
+     *
+     * @param callback CsiCallback for the application to receive updates about
+     * csi events.
+     * @param handler Handler to be used for callbacks. If the caller passes a null Handler,
+     * the main thread will be used.
+     *
+     */
     private void registerCsiCallback(CsiCallback callback, Handler handler) {
         if (callback == null) throw new IllegalArgumentException("callback cannot be null");
         Log.v(TAG, "registerCsiCallback: callback=" + callback + ", handler=" + handler);
@@ -260,7 +378,7 @@ public class QtiWifiManager {
      * Allow callers to unregister a previously registered callback. After calling this method,
      * applications will no longer receive csi events.
      *
-     * @param callback Callback to unregister for csi events
+     * @param callback Callback to unregister for csi events.
      *
      */
     private void unregisterCsiCallback(CsiCallback callback) {
@@ -274,6 +392,21 @@ public class QtiWifiManager {
         }
     }
 
+    /**
+     * API to register for CSI callbacks and start CSI data collection.
+     * CsiCallback is used by caller to receive updates about CSI events.
+     * Optional Handler to be used for callbacks.
+     * If the caller passes a null Handler, the main thread will be used.
+     *
+     * <p>
+     * Applications should have com.qualcomm.permission.QTI_WIFI permission.
+     * Callers without the permission would trigger a {@link java.lang.SecurityException}
+     * <p>
+     *
+     * @param callback CsiCallback for the application to receive csi event updates.
+     * @param handler Handler to be used for callbacks.
+     *
+     */
     public boolean startCsi(CsiCallback callback, Handler handler) {
         registerCsiCallback(callback, handler);
         try {
@@ -285,6 +418,17 @@ public class QtiWifiManager {
         }
     }
 
+    /**
+     * API to stop CSI data collection and unregister for CsiCallback.
+     *
+     * <p>
+     * Applications should have com.qualcomm.permission.QTI_WIFI permission.
+     * Callers without the permission would trigger a {@link java.lang.SecurityException}
+     * <p>
+     *
+     * @param callback Callback to unregister for csi events.
+     *
+     */
     public boolean stopCsi(CsiCallback callback) {
         try {
             mService.stopCsi();
@@ -295,4 +439,104 @@ public class QtiWifiManager {
         unregisterCsiCallback(callback);
         return true;
     }
+
+    /**
+     * Get BSS information.
+     *
+     * Gets the BSS information. The information obtained through these
+     * commands signify the current info in connected state and
+     * latest cached information during the connected state , if queried
+     * when in disconnected state.
+     *
+     * <p>
+     * Applications should have com.qualcomm.permission.QTI_WIFI permission.
+     * Callers without the permission would trigger a {@link java.lang.SecurityException}
+     * <p>
+     *
+     * @return String containing the information about BSS.
+     * Output Example: 00:c1:64 5785 20 0 130 4 1 0 0 96 -96 9 1 0 0
+     *
+     */
+    public String getBssInfo() {
+        try {
+            return mService.getBssInfo();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Get BSS Stats information.
+     *
+     * <p>
+     * Applications should have com.qualcomm.permission.QTI_WIFI permission.
+     * Callers without the permission would trigger a {@link java.lang.SecurityException}
+     * <p>
+     *
+     * @param MacAddress mac address of the BSS
+     * @return String containing the detailed information about BSS.
+     * Output Example: 00c164 Hydra 5785 20 0 130 4 -1 -1 -1 96 -96 9 0 -1 -1 -1 -1 0 US 0 -1 -1 -1 0 0 0 0 0 0 0 0 0
+     *
+     */
+    public String getStatsBssInfo(byte[] MacAddress) {
+        try {
+            return mService.getStatsBssInfo(MacAddress);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Registers a callback for QtiInterface.
+     * Caller can unregister a previously registered callback using
+     * {@link #unregisterCallback(QtiInterfaceCallback)}
+     *
+     * <p>
+     * Applications should have com.qualcomm.permission.QTI_WIFI. Callers without
+     * the permission would trigger a {@link java.lang.SecurityException}
+     * <p>
+     *
+     * @param callback QtiInterfaceCallback for the application to receive updates about
+     * Network status and Wifi alerts.
+     * @param handler Handler to be used for callbacks. If the caller passes a null Handler,
+     * the main thread will be used
+     *
+     */
+    public void registerCallback(QtiInterfaceCallback callback, Handler handler) {
+        if (callback == null) throw new IllegalArgumentException("callback cannot be null");
+        Log.v(TAG, "registerCallback: callback=" + callback + ", handler=" + handler);
+
+        Looper looper = (handler == null) ? mContext.getMainLooper() : handler.getLooper();
+        Binder binder = new Binder();
+        try {
+            mService.registerCallback(binder, new QtiInterfaceCallbackProxy(looper, callback),
+                    callback.hashCode());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Allow callers to unregister a previously registered callback. After calling this method,
+     * applications will no longer receive Qti interface events.
+     *
+     * <p>
+     * Applications should have com.qualcomm.permission.QTI_WIFI. Callers without
+     * the permission would trigger a {@link java.lang.SecurityException}
+     * <p>
+     *
+     * @param callback Callback to unregister for Qti interface events
+     *
+     */
+    public void unregisterCallback(QtiInterfaceCallback callback) {
+        if (callback == null) throw new IllegalArgumentException("callback cannot be null");
+        Log.v(TAG, "unregisterCallback: callback=" + callback);
+
+        try {
+            mService.unregisterCallback(callback.hashCode());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
 }

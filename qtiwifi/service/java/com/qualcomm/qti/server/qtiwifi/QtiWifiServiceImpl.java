@@ -55,12 +55,15 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 
 import com.qualcomm.qti.qtiwifi.ICsiCallback;
+import com.qualcomm.qti.qtiwifi.IQtiInterfaceCallback;
 import com.qualcomm.qti.qtiwifi.IQtiWifiManager;
 import com.qualcomm.qti.qtiwifi.IVendorEventCallback;
 import com.qualcomm.qti.qtiwifi.ThermalData;
 import vendor.qti.hardware.wifi.supplicant.ISupplicantVendor;
+import android.content.pm.PackageManager;
 
 public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     private static final String TAG = "QtiWifiServiceImpl";
@@ -71,12 +74,14 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     private final Context mContext;
     private Object mLock = new Object();
     private final IntentFilter mQtiIntentFilter;
+    private static final String QTIWIFI_PERMISSION = "com.qualcomm.permission.QTI_WIFI";
 
     private HandlerThread mHandlerThread = null;
     private Handler mHandler = null;
     private QtiWifiThreadRunner mQtiWifiThreadRunner = null;
 
     QtiWifiCsiHal qtiWifiCsiHal;
+    QtiWifiHandler qtiWifiHandler;
     QtiSupplicantStaIfaceHal qtiSupplicantStaIfaceHal;
     QtiHostapdHal qtiHostapdHal;
 
@@ -218,8 +223,10 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         mHandler = new Handler(mHandlerThread.getLooper());
         mQtiWifiThreadRunner = new QtiWifiThreadRunner(mHandler);
         mVendorEventCallbacks = new RemoteCallbackList<>();
-
         mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+        qtiWifiHandler = new QtiWifiHandler();
+        qtiWifiCsiHal = new QtiWifiCsiHal();
+        qtiSupplicantStaIfaceHal = new QtiSupplicantStaIfaceHal();
         if (isAutoPlatform() && mWifiManager.isWifiApEnabled()) {
             Log.d(TAG, "isWifiApEnabled true");
             checkAndInitHostapdVendorHal();
@@ -249,13 +256,11 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
 
     public void checkAndInitCfrHal() {
         Log.i(TAG, "checkAndInitCfrHal");
-        qtiWifiCsiHal = new QtiWifiCsiHal();
         qtiWifiCsiHal.initialize();
     }
 
     public void checkAndInitSupplicantStaIfaceHal() {
         Log.i(TAG, "checkAndInitSupplicantStaIfaceHal");
-        qtiSupplicantStaIfaceHal = new QtiSupplicantStaIfaceHal();
         qtiSupplicantStaIfaceHal.initialize();
         if (!qtiSupplicantStaIfaceHal.setupVendorIface("wlan0")) {
             Log.e(TAG, "Failed to setup iface in supplicant on wlan0");
@@ -385,6 +390,10 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
    @Override
     public void registerCsiCallback(IBinder binder, ICsiCallback callback,
             int callbackIdentifier) {
+        if (mContext.checkCallingPermission(QTIWIFI_PERMISSION) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                throw new SecurityException("Requires com.qualcomm.permission.QTI_WIFI permission");
+        }
         // verify arguments
         if (binder == null) {
             throw new IllegalArgumentException("Binder must not be null");
@@ -402,6 +411,10 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
 
     @Override
     public void unregisterCsiCallback(int callbackIdentifier) {
+        if (mContext.checkCallingPermission(QTIWIFI_PERMISSION) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                throw new SecurityException("Requires com.qualcomm.permission.QTI_WIFI permission");
+        }
         enforceAccessPermission();
         if (DBG) {
             Log.i(TAG, "unregisterCsiCallback uid=%" + Binder.getCallingUid());
@@ -413,7 +426,12 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     /**
      * see {@link com.qualcomm.qti.qtiwifi.QtiWifiManager#startCsi}
      */
+    @Override
     public void startCsi() {
+        if (mContext.checkCallingPermission(QTIWIFI_PERMISSION) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                throw new SecurityException("Requires com.qualcomm.permission.QTI_WIFI permission");
+        }
         enforceChangePermission();
         Log.i(TAG, "startCsi");
         mQtiWifiThreadRunner.run(() -> qtiWifiCsiHal.startCsi());
@@ -424,7 +442,12 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     /**
      * see {@link com.qualcomm.qti.qtiwifi.QtiWifiManager#stopCsi}
      */
+    @Override
     public void stopCsi() {
+        if (mContext.checkCallingPermission(QTIWIFI_PERMISSION) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                throw new SecurityException("Requires com.qualcomm.permission.QTI_WIFI permission");
+        }
         enforceChangePermission();
         Log.i(TAG, "stopCsi");
         mQtiWifiThreadRunner.run(() -> qtiSupplicantStaIfaceHal.doDriverCmd(
@@ -441,4 +464,62 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         mContext.enforceCallingOrSelfPermission(
             android.Manifest.permission.CHANGE_WIFI_STATE, TAG);
     }
+
+    @Override
+    public String getBssInfo()
+    {
+        if (mContext.checkCallingPermission(QTIWIFI_PERMISSION) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                throw new SecurityException("Requires com.qualcomm.permission.QTI_WIFI permission");
+        }
+        return qtiSupplicantStaIfaceHal.doDriverCmd("GETBSSINFO");
+    }
+
+    @Override
+    public String getStatsBssInfo(byte[] addr)
+    {
+        if (mContext.checkCallingPermission(QTIWIFI_PERMISSION) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                throw new SecurityException("Requires com.qualcomm.permission.QTI_WIFI permission");
+        }
+        String command = "GETSTATSBSSINFO";
+        if (addr != null)
+            command +=  " " + Arrays.toString(addr);
+        return qtiSupplicantStaIfaceHal.doDriverCmd(command);
+    }
+
+    @Override
+    public void registerCallback(IBinder binder, IQtiInterfaceCallback callback,
+            int callbackIdentifier) {
+        if (mContext.checkCallingPermission(QTIWIFI_PERMISSION) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                throw new SecurityException("Requires com.qualcomm.permission.QTI_WIFI permission");
+        }
+        // verify arguments
+        if (binder == null) {
+            throw new IllegalArgumentException("Binder must not be null");
+        }
+        if (callback == null) {
+            throw new IllegalArgumentException("Callback must not be null");
+        }
+        enforceAccessPermission();
+        if (DBG) {
+            Log.i(TAG, "registerCallback uid=%" + Binder.getCallingUid());
+        }
+        qtiWifiHandler.registerCallback(binder, callback, callbackIdentifier);
+    }
+
+    @Override
+    public void unregisterCallback(int callbackIdentifier) {
+        if (mContext.checkCallingPermission(QTIWIFI_PERMISSION) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                throw new SecurityException("Requires com.qualcomm.permission.QTI_WIFI permission");
+        }
+        enforceAccessPermission();
+        if (DBG) {
+            Log.i(TAG, "unregisterCallback uid=%" + Binder.getCallingUid());
+        }
+        qtiWifiHandler.unregisterCallback(callbackIdentifier);
+    }
+
 }
