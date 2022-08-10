@@ -64,6 +64,7 @@ import com.qualcomm.qti.qtiwifi.IVendorEventCallback;
 import com.qualcomm.qti.qtiwifi.ThermalData;
 import vendor.qti.hardware.wifi.supplicant.ISupplicantVendor;
 import android.content.pm.PackageManager;
+import com.qualcomm.qti.server.qtiwifi.util.GeneralUtil;
 
 public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     private static final String TAG = "QtiWifiServiceImpl";
@@ -84,6 +85,7 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     QtiWifiHandler qtiWifiHandler;
     QtiSupplicantStaIfaceHal qtiSupplicantStaIfaceHal;
     QtiHostapdHal qtiHostapdHal;
+    QtiWifiVendorHal qtiWifiVendorHal;
 
     private boolean mIsQtiSupplicantHalInitialized = false;
     private boolean mIsQtiHostapdHalInitialized = false;
@@ -223,10 +225,13 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         mHandler = new Handler(mHandlerThread.getLooper());
         mQtiWifiThreadRunner = new QtiWifiThreadRunner(mHandler);
         mVendorEventCallbacks = new RemoteCallbackList<>();
-        mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         qtiWifiHandler = new QtiWifiHandler();
         qtiWifiCsiHal = new QtiWifiCsiHal();
         qtiSupplicantStaIfaceHal = new QtiSupplicantStaIfaceHal();
+        qtiWifiVendorHal = new QtiWifiVendorHal(qtiWifiHandler);
+        qtiHostapdHal = new QtiHostapdHal();
+
+        mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         if (isAutoPlatform() && mWifiManager.isWifiApEnabled()) {
             Log.d(TAG, "isWifiApEnabled true");
             checkAndInitHostapdVendorHal();
@@ -238,6 +243,7 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
                 checkAndInitCfrHal();
             }
             checkAndInitSupplicantStaIfaceHal();
+            checkAndInitQtiVendorHal();
             mIsQtiSupplicantHalInitialized = true;
         }
     }
@@ -249,9 +255,13 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
 
     public void checkAndInitHostapdVendorHal() {
         Log.i(TAG, "checkAndInitHostapdVendorHal");
-        qtiHostapdHal = new QtiHostapdHal();
         qtiHostapdHal.initialize();
         qtiHostapdHal.registerWifiHalListener(mHalListener);
+    }
+
+    public void checkAndInitQtiVendorHal() {
+        Log.i(TAG, "checkAndInitQtiVendorHal");
+        qtiWifiVendorHal.initialize();
     }
 
     public void checkAndInitCfrHal() {
@@ -483,8 +493,10 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
                 throw new SecurityException("Requires com.qualcomm.permission.QTI_WIFI permission");
         }
         String command = "GETSTATSBSSINFO";
-        if (addr != null)
-            command +=  " " + Arrays.toString(addr);
+        if (addr != null) {
+            String macAddr = GeneralUtil.macAddressFromByteArray(addr);
+            command +=  " " + macAddr;
+        }
         return qtiSupplicantStaIfaceHal.doDriverCmd(command);
     }
 
