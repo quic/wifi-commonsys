@@ -1,20 +1,64 @@
 //=============================================
 //  QtiWifi Service APK
 //=============================================
+
+soong_config_bool_variable {
+    name: "automobile",
+}
+
+soong_config_module_type {
+    name: "qtiwifi_java_defaults",
+    module_type: "java_defaults",
+    config_namespace: "qtiwifi",
+    bool_variables: ["automobile"],
+    properties: ["static_libs", "srcs"],
+}
+
+qtiwifi_java_defaults {
+    name: "qtiwifi_defaults",
+    soong_config_variables: {
+        automobile: {
+            static_libs: ["vendor.qti.hardware.wifi.supplicant-V2-java",
+                          "vendor.qti.hardware.wifi.hostapd-V1-java"
+                         ],
+            srcs: ["java/com/qualcomm/qti/server/qtiwifi/current/QtiHostapdHalAidlImpl.java",
+                   "java/com/qualcomm/qti/server/qtiwifi/current/QtiSupplicantStaIfaceHalAidlImpl.java",
+                  ],
+            conditions_default: {
+                static_libs: ["vendor.qti.hardware.wifi.supplicant-V1-java"],
+                srcs: ["java/com/qualcomm/qti/server/qtiwifi/legacy/QtiHostapdHalAidlImpl.java",
+                       "java/com/qualcomm/qti/server/qtiwifi/legacy/QtiSupplicantStaIfaceHalAidlImpl.java",
+                      ]
+            },
+        },
+     },
+}
+
 android_app {
     name: "QtiWifiService",
 
     platform_apis: true,
 
-    srcs: ["java/**/*.java"],
+    srcs: ["java/com/qualcomm/qti/server/qtiwifi/IQtiHostapdHal.java",
+           "java/com/qualcomm/qti/server/qtiwifi/IQtiSupplicantStaIfaceHal.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiHostapdHalHidlImpl.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiHostapdHal.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiSupplicantStaIfaceHalHidlImpl.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiSupplicantStaIfaceHal.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiWifiCsiHal.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiWifiService.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiWifiThreadRunner.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiWifiServiceImpl.java",
+           "java/com/qualcomm/qti/server/qtiwifi/util/GeneralUtil.java",
+          ],
     resource_dirs: ["res"],
+    defaults: ["qtiwifi_defaults"],
     static_libs: ["android-support-v13",
                  "qtiwifi_manager",
                  "vendor.qti.hardware.wifi.wificfr-V1.0-java",
                  "vendor.qti.hardware.wifi.supplicant-V2.0-java",
                  "vendor.qti.hardware.wifi.supplicant-V2.1-java",
-                 "vendor.qti.hardware.wifi.supplicant-V2.2-java",
-                 "vendor.qti.hardware.wifi.supplicant-V1-java"
+                 "vendor.qti.hardware.wifi.supplicant-V2.2-java"
                  ],
     libs: [
           "android.hardware.wifi.supplicant-V1.0-java",

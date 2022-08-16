@@ -32,4 +32,11 @@ interface IQtiSupplicantStaIfaceHal {
      * @return status/reply based on command type.
      */
     String doDriverCmd(String command);
+
+    /**
+     * List available STA interfaces
+     *
+     * @return active STA instances
+     */
+    String[] listVendorInterfaces();
 }

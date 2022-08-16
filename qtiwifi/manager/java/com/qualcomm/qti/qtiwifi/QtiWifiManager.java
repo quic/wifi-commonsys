@@ -121,6 +121,15 @@ public class QtiWifiManager {
         public abstract void onAvailable(QtiWifiManager manager);
     }
 
+    public List<String> getAvailableInterfaces() {
+        try {
+            return mService.getAvailableInterfaces();
+        } catch (RemoteException e) {
+            Log.e(TAG, "getAvailableInterfaces: " + e);
+            return null;
+        }
+    }
+
     /**
      * Base class for Csi callback. Should be extended by applications and set when calling
      * {@link QtiWifiManager#registerCsiCallback(CsiCallback, Handler)}.

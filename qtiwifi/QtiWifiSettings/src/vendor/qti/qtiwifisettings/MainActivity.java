@@ -41,19 +41,26 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
+import android.widget.TextView;
+import android.widget.EditText;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.content.ServiceConnection;
 import android.content.ComponentName;
+import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.os.Build;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.IOException;
+import java.util.List;
 
 import android.net.wifi.WifiManager;
 import com.qualcomm.qti.qtiwifi.QtiWifiManager;
@@ -65,10 +72,19 @@ public class MainActivity extends Activity implements View.OnClickListener {
     //button objects
     private Button buttonStart;
     private Button buttonStop;
+    private Button buttonCommand;
+    private EditText editTextCommand;
+    private TextView textViewCommand;
     private WifiManager mWifiManager;
     private static QtiWifiManager mUniqueInstance = null;
     private FileOutputStream fileout;
     private OutputStreamWriter outputWriter;
+
+    private static final String COMMAND_GET_AVAILABLE_INTERFACES = "list-interfaces";
+    private static final String COMMAND_RESULT_FAILED = "FAILED";
+    private static final String COMMAND_RESULT_SUCCESS = "SUCCESS";
+    private static final String COMMAND_RESULT_INVALID_COMMAND = "Invalid command!";
+    private static final String COMMAND_RESULT_INVALID_ARGS = "Invalid args!";
 
     private QtiWifiManager.CsiCallback mCsiCallback = new QtiWifiManager.CsiCallback() {
         @Override
@@ -110,6 +126,23 @@ public class MainActivity extends Activity implements View.OnClickListener {
         //attaching onclicklistener to buttons
         buttonStart.setOnClickListener(this);
         buttonStop.setOnClickListener(this);
+
+        buttonCommand = (Button) findViewById(R.id.buttonCommand);
+        editTextCommand = (EditText) findViewById(R.id.editTextCommand);
+        textViewCommand = (TextView) findViewById(R.id.textViewCommand);
+        buttonCommand.setOnClickListener(this);
+        textViewCommand.setMovementMethod(ScrollingMovementMethod.getInstance());
+
+        ViewGroup layout = (ViewGroup) buttonCommand.getParent();
+        if (!isAutoPlatform()) {
+            layout.removeView(buttonCommand);
+            layout.removeView(editTextCommand);
+            layout.removeView(textViewCommand);
+        } else {
+            layout.removeView(buttonStart);
+            layout.removeView(buttonStop);
+        }
+
         mWifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
     }
 
@@ -119,22 +152,25 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     @Override
     public void onClick(View view) {
+        if (mUniqueInstance == null) {
+            showMessage("uniqueInstance is null");
+            Log.e(TAG, "Failed to get QtiWifiManager instance");
+            return;
+        }
         if (view == buttonStart) {
             //starting service
-            if (mUniqueInstance != null) {
-                if (!mWifiManager.isWifiEnabled()) {
-                    showMessage("Turn on Wifi before capturing CSI data");
-                    Log.e(TAG, "Turn on Wifi before capturing CSI data");
-                } else if (mWifiManager.isWifiEnabled()) {
-                    showMessage("CSI start until user stops");
-                    mUniqueInstance.startCsi(mCsiCallback, null);
-                    try {
-                        fileout=openFileOutput("mytextfile.txt", MODE_PRIVATE);
-                        outputWriter=new OutputStreamWriter(fileout);
-                        showMessage("File open successfully!");
-                    } catch (Exception e) {
-                        Log.e(TAG, "Failed to open file");
-                    }
+            if (!mWifiManager.isWifiEnabled()) {
+                showMessage("Turn on Wifi before capturing CSI data");
+                Log.e(TAG, "Turn on Wifi before capturing CSI data");
+            } else if (mWifiManager.isWifiEnabled()) {
+                showMessage("CSI start until user stops");
+                mUniqueInstance.startCsi(mCsiCallback, null);
+                try {
+                    fileout=openFileOutput("mytextfile.txt", MODE_PRIVATE);
+                    outputWriter=new OutputStreamWriter(fileout);
+                    showMessage("File open successfully!");
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to open file");
                 }
             } else {
                 showMessage("uniqueInstance is null");
@@ -142,20 +178,35 @@ public class MainActivity extends Activity implements View.OnClickListener {
             }
         } else if (view == buttonStop) {
             //stopping service
-            if (mUniqueInstance != null) {
-                showMessage("CSI stop");
-                mUniqueInstance.stopCsi(mCsiCallback);
-                try {
-                    outputWriter.close();
-                    Log.i(TAG, "Succseefully close the file");
-                } catch (IOException e) {
-                    Log.e(TAG, "Failed to close the file");
+            mUniqueInstance.stopCsi(mCsiCallback);
+            try {
+                outputWriter.close();
+                Log.i(TAG, "Succseefully close the file");
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to close the file");
+            }
+        } else if (view == buttonCommand) {
+            String command = editTextCommand.getText().toString();
+            String reply = "";
+            String[] params = command.split("\\s+");
+            int size = params.length;
+            if (size == 0) {
+                reply = COMMAND_RESULT_INVALID_COMMAND;
+            } else if (params[0].equals(COMMAND_GET_AVAILABLE_INTERFACES)) {
+                List<String> ifaces = mUniqueInstance.getAvailableInterfaces();
+                if (ifaces != null) {
+                    reply = ifaces.toString();
                 }
             } else {
-                showMessage("uniqueInstance is null");
-                Log.e(TAG, "Failed to get QtiWifiManager instance");
+                reply = COMMAND_RESULT_INVALID_COMMAND;
             }
+            reply = "result of " + command + ":\n" + reply;
+            textViewCommand.setText(reply);
         }
+    }
+
+    private boolean isAutoPlatform() {
+        return getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE);
     }
 
     public static void unbindService(Context context) {

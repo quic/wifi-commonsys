@@ -46,6 +46,32 @@
         android:layout_centerVertical="true"
         android:orientation="vertical">
 
+        <EditText
+            android:id="@+id/editTextCommand"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="input command here"
+            android:layout_margin="20dp" />
+
+        <Button
+            android:id="@+id/buttonCommand"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="20dp"
+            android:text="Run Command" />
+
+        <TextView
+            android:id="@+id/textViewCommand"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:singleLine="false"
+            android:scrollbars="vertical"
+            android:maxLines="5"
+            android:layout_margin="20dp" />
+
         <Button
             android:id="@+id/buttonStart"
             android:layout_width="match_parent"

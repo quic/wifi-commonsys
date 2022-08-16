@@ -144,4 +144,13 @@ public class QtiSupplicantStaIfaceHal {
         }
     }
 
+    public String[] listVendorInterfaces() {
+        synchronized (mLock) {
+            if (mQtiStaIfaceHal == null) {
+                Log.e(TAG, "call listVendorInterfaces but mQtiStaIfaceHal is null??");
+                return null;
+            }
+            return mQtiStaIfaceHal.listVendorInterfaces();
+        }
+    }
 }

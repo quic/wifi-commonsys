@@ -42,6 +42,12 @@
           file="/system/framework/android.hardware.wifi.supplicant-V1.2-java.jar"/>
  <library name="android.hardware.wifi.supplicant.V1_3.ISupplicant"
           file="/system/framework/android.hardware.wifi.supplicant-V1.3-java.jar"/>
+ <library name="vendor.qti.hardware.wifi.supplicant.ISupplicantVendor"
+          file="/system/framework/vendor.qti.hardware.wifi.supplicant-V1-java.jar"/>
+ <library name="vendor.qti.hardware.wifi.supplicant.ISupplicantVendor"
+          file="/system/framework/vendor.qti.hardware.wifi.supplicant-V2-java.jar"/>
+ <library name="vendor.qti.hardware.wifi.hostapd.IHostapdVendor"
+          file="/system/framework/vendor.qti.hardware.wifi.hostapd-V1-java.jar"/>
  <library name="android.hidl.manager.V1_0.IServiceManager"
           file="/system/framework/android.hidl.manager-V1.0-java.jar"/>
  <library name="android.hidl.manager.V1_0.IServiceNotification"

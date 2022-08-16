@@ -40,4 +40,5 @@ interface IQtiWifiManager
     void stopCsi();
     void registerCsiCallback(in IBinder binder, in ICsiCallback callback, int callbackIdentifier);
     void unregisterCsiCallback(int callbackIdentifier);
+    List<String> getAvailableInterfaces();
 }

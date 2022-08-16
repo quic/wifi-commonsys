@@ -46,14 +46,22 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
 
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+
 import com.qualcomm.qti.qtiwifi.ICsiCallback;
 import com.qualcomm.qti.qtiwifi.IQtiWifiManager;
+import vendor.qti.hardware.wifi.supplicant.ISupplicantVendor;
 
 public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     private static final String TAG = "QtiWifiServiceImpl";
     private static final boolean DBG = true;
     private boolean mServiceStarted = false;
-    private boolean mInitializeHals = false;
     private WifiManager mWifiManager;
 
     private final Context mContext;
@@ -66,6 +74,10 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
 
     QtiWifiCsiHal qtiWifiCsiHal;
     QtiSupplicantStaIfaceHal qtiSupplicantStaIfaceHal;
+    QtiHostapdHal qtiHostapdHal;
+
+    private boolean mIsQtiSupplicantHalInitialized = false;
+    private boolean mIsQtiHostapdHalInitialized = false;
 
     public QtiWifiServiceImpl(Context context) {
         Log.d(TAG, "QtiWifiServiceImpl ctor");
@@ -73,6 +85,9 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
 
         mQtiIntentFilter = new IntentFilter();
         mQtiIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+        if (isAutoPlatform()) {
+            mQtiIntentFilter.addAction(WifiManager.WIFI_AP_STATE_CHANGED_ACTION);
+        }
         mContext.registerReceiver(mQtiReceiver, mQtiIntentFilter);
 
         mHandlerThread = new HandlerThread("QtiWifiHandlerThread");
@@ -81,17 +96,30 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         mQtiWifiThreadRunner = new QtiWifiThreadRunner(mHandler);
 
         mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+        if (isAutoPlatform() && mWifiManager.isWifiApEnabled()) {
+            Log.d(TAG, "isWifiApEnabled true");
+            checkAndInitHostapdVendorHal();
+            mIsQtiHostapdHalInitialized = true;
+        }
         if (mWifiManager.isWifiEnabled()) {
             Log.d(TAG, "isWifiEnabled true");
-            mInitializeHals = true;
-            checkAndInitCfrHal();
+            if (!isAutoPlatform()) {
+                checkAndInitCfrHal();
+            }
             checkAndInitSupplicantStaIfaceHal();
+            mIsQtiSupplicantHalInitialized = true;
         }
     }
 
     protected void destroyService() {
         Log.d(TAG, "destroyService()");
         mServiceStarted = false;
+    }
+
+    public void checkAndInitHostapdVendorHal() {
+        Log.i(TAG, "checkAndInitHostapdVendorHal");
+        qtiHostapdHal = new QtiHostapdHal();
+        qtiHostapdHal.initialize();
     }
 
     public void checkAndInitCfrHal() {
@@ -115,18 +143,92 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
             String action = intent.getAction();
             if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action)) {
                  int state = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_UNKNOWN);
-                 if ((state == WifiManager.WIFI_STATE_ENABLED) && !mInitializeHals) {
-                     Log.i(TAG, "Didn't iniltailze the hals, now initializing");
+                 if ((state == WifiManager.WIFI_STATE_ENABLED) && !mIsQtiSupplicantHalInitialized) {
+                     Log.i(TAG, "Didn't iniltailze the supplicant hals, now initializing");
                      checkAndInitCfrHal();
                      checkAndInitSupplicantStaIfaceHal();
+                     mIsQtiSupplicantHalInitialized = true;
                  } else if (state == WifiManager.WIFI_STATE_DISABLED) {
-                     mInitializeHals = false;
+                     Log.i(TAG, "received wifi disabled");
+                     mIsQtiSupplicantHalInitialized = false;
                  }
+            } else if (isAutoPlatform() && WifiManager.WIFI_AP_STATE_CHANGED_ACTION.equals(action)) {
+                int state = intent.getIntExtra(WifiManager.EXTRA_WIFI_AP_STATE, WifiManager.WIFI_AP_STATE_FAILED);
+                if ((state == WifiManager.WIFI_AP_STATE_ENABLED) && !mIsQtiHostapdHalInitialized) {
+                    Log.i(TAG, "Didn't initialize hostapd hal, now initializing");
+                    checkAndInitHostapdVendorHal();
+                    mIsQtiHostapdHalInitialized = true;
+                } else if (state == WifiManager.WIFI_AP_STATE_DISABLED) {
+                    Log.i(TAG, "received ap disabled");
+                    mIsQtiHostapdHalInitialized = false;
+                }
             }
         }
     };
 
-    @Override
+    private String[] listHostapdVendorInterfaces() {
+        if (!mIsQtiHostapdHalInitialized) {
+            return null;
+        }
+        return mQtiWifiThreadRunner.call(() ->
+            qtiHostapdHal.listVendorInterfaces(), null);
+    }
+
+    private String[] listSupplicantVendorInterfaces() {
+        if (!mIsQtiSupplicantHalInitialized) {
+            return null;
+        }
+        return mQtiWifiThreadRunner.call(() ->
+            qtiSupplicantStaIfaceHal.listVendorInterfaces(), null);
+    }
+
+    public boolean isSupplicantIface(String ifname) {
+        String[] ifnames = listSupplicantVendorInterfaces();
+        if (ifnames != null && Arrays.asList(ifnames).contains(ifname)) {
+           return true;
+        }
+        return false;
+    }
+
+    public boolean isHostapdIface(String ifname) {
+        String[] ifnames = listHostapdVendorInterfaces();
+        if (ifnames != null && Arrays.asList(ifnames).contains(ifname)) {
+           return true;
+        }
+        return false;
+    }
+
+    public List<String> getAvailableInterfaces() {
+        enforceAccessPermission();
+        List<String> ifaces = new ArrayList<String>();
+
+        String[] hapdIfaces = listHostapdVendorInterfaces();
+        if (hapdIfaces != null && hapdIfaces.length > 0) {
+            ifaces.addAll(Arrays.asList(hapdIfaces));
+        }
+
+        String[] suppIfaces = listSupplicantVendorInterfaces();
+        if (suppIfaces != null && suppIfaces.length > 0) {
+            ifaces.addAll(Arrays.asList(suppIfaces));
+        }
+        return ifaces;
+    }
+
+    public boolean isAutoPlatform() {
+        if (ISupplicantVendor.VERSION == 2) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean setSuccess(String reply) {
+        if (reply != null && reply.contains("OK")) {
+            return true;
+        }
+        return false;
+    }
+
+   @Override
     public void registerCsiCallback(IBinder binder, ICsiCallback callback,
             int callbackIdentifier) {
         // verify arguments

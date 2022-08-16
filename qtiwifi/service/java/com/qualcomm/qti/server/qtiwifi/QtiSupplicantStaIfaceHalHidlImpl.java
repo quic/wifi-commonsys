@@ -524,5 +524,9 @@ public class QtiSupplicantStaIfaceHalHidlImpl implements IQtiSupplicantStaIfaceH
          }
     }
 
+    public String[] listVendorInterfaces() {
+        return null;
+        /* not implemented */
+    }
 }
 
