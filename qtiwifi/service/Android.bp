@@ -51,6 +51,11 @@ android_app {
            "java/com/qualcomm/qti/server/qtiwifi/QtiWifiServiceImpl.java",
            "java/com/qualcomm/qti/server/qtiwifi/QtiWifiHandler.java",
            "java/com/qualcomm/qti/server/qtiwifi/QtiWifiVendorHal.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiSupplicantIface.java",
+           "java/com/qualcomm/qti/server/qtiwifi/IQtiSupplicantStaIfaceAOSPHal.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiSupplicantStaIfaceAOSPHal.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiSupplicantStaIfaceAOSPHalAidlImpl.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiSupplicantStaIfaceAOSPHalHidlImpl.java",
            "java/com/qualcomm/qti/server/qtiwifi/util/GeneralUtil.java",
           ],
     resource_dirs: ["res"],
@@ -59,8 +64,10 @@ android_app {
                  "qtiwifi_manager",
                  "vendor.qti.hardware.wifi.wificfr-V1.0-java",
                  // HIDL
-                 "android.hardware.wifi.supplicant-V1.3-java",
+                 "android.hardware.wifi.supplicant-V1.4-java",
                  "vendor.qti.hardware.wifi.supplicant-V2.2-java",
+                 // AIDL
+                 "android.hardware.wifi.supplicant-V1-java",
                  "android.hardware.wifi-V1.6-java",
                  "android.hidl.manager-V1.2-java"
                  ],
