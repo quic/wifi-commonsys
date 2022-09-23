@@ -40,11 +40,13 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemProperties;
+import android.os.RemoteCallbackList;
 import android.util.Log;
 import android.net.wifi.WifiManager;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
+import com.android.internal.util.RingBuffer;
 
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -56,6 +58,8 @@ import java.text.SimpleDateFormat;
 
 import com.qualcomm.qti.qtiwifi.ICsiCallback;
 import com.qualcomm.qti.qtiwifi.IQtiWifiManager;
+import com.qualcomm.qti.qtiwifi.IVendorEventCallback;
+import com.qualcomm.qti.qtiwifi.ThermalData;
 import vendor.qti.hardware.wifi.supplicant.ISupplicantVendor;
 
 public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
@@ -79,6 +83,89 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
     private boolean mIsQtiSupplicantHalInitialized = false;
     private boolean mIsQtiHostapdHalInitialized = false;
 
+    private WifiHalListener mHalListener = new WifiHalListenerImpl();
+
+    /* Hal vendor event string */
+    public static final String THERMAL_EVENT_STR = "CTRL-EVENT-THERMAL-CHANGED";
+    public static final Pattern THERMAL_PATTERN =
+        Pattern.compile(THERMAL_EVENT_STR + " level=([0-9]+)");
+
+    /* Vendor callbacks */
+    private final RemoteCallbackList<IVendorEventCallback> mVendorEventCallbacks;
+    private final HashMap<Integer, IVendorEventCallback> mVendorEventCallbacksMap = new HashMap<>();
+
+    public ThermalData getThermalInfo(String ifname) {
+        final String kGetThermalCmd = "GET_THERMAL_INFO";
+        enforceAccessPermission();
+        String reply;
+        if (isSupplicantIface(ifname)) {
+            reply = qtiSupplicantStaIfaceHal.doDriverCmd(kGetThermalCmd);
+        } else if (isHostapdIface(ifname)) {
+            reply = qtiHostapdHal.doDriverCmd(ifname, kGetThermalCmd);
+        } else {
+            return null;
+        }
+
+        int[] info = new int[2];
+        try {
+            String[] infoString = reply.split("\\s+");
+            info[0] = Integer.parseInt(infoString[0]);
+            info[1] = Integer.parseInt(infoString[1]);
+        } catch (Exception e) {
+            Log.e(TAG, "invalid result for get thermal info");
+            return null;
+        }
+        ThermalData thermalData = new ThermalData();
+        thermalData.setTemperature(info[0]);
+        thermalData.setThermalLevel(toFrameworkThermalLevel(info[1]));
+        return thermalData;
+    }
+
+    // Defined to be used by Hal
+    public interface WifiHalListener {
+        void onThermalChanged(String ifname, int level);
+    }
+
+    private int toFrameworkThermalLevel(int original_val) {
+        switch (original_val) {
+            case 0:
+                return ThermalData.THERMAL_INFO_LEVEL_FULL_PERF;
+            case 2:
+                return ThermalData.THERMAL_INFO_LEVEL_REDUCED_PERF;
+            case 4:
+                return ThermalData.THERMAL_INFO_LEVEL_TX_OFF;
+            case 5:
+                return ThermalData.THERMAL_INFO_LEVEL_SHUT_DOWN;
+        }
+        return ThermalData.THERMAL_INFO_LEVEL_UNKNOWN;
+    }
+
+    private class WifiHalListenerImpl implements WifiHalListener {
+        int mLastThermalLevel = ThermalData.THERMAL_INFO_LEVEL_UNKNOWN;
+        @Override
+        public void onThermalChanged(String ifname, int level) {
+            synchronized (mVendorEventCallbacks) {
+                level = toFrameworkThermalLevel(level);
+                // Reduce duplicate Thermal change event report.
+                if (level == mLastThermalLevel) {
+                    Log.d(TAG, "ignore duplicate report thermal with same level " + level);
+                    return;
+                }
+                mLastThermalLevel = level;
+                // Trigger callbacks
+                int itemCount = mVendorEventCallbacks.beginBroadcast();
+                for (int i = 0; i < itemCount; ++i) {
+                    try {
+                        mVendorEventCallbacks.getBroadcastItem(i).onThermalChanged(ifname, level);
+                    } catch (Exception e) {
+                        Log.e(TAG, "onThermalChanged error.");
+                    }
+                }
+                mVendorEventCallbacks.finishBroadcast();
+            }
+        }
+    }
+
     public QtiWifiServiceImpl(Context context) {
         Log.d(TAG, "QtiWifiServiceImpl ctor");
         mContext = context;
@@ -94,6 +181,7 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
         mQtiWifiThreadRunner = new QtiWifiThreadRunner(mHandler);
+        mVendorEventCallbacks = new RemoteCallbackList<>();
 
         mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         if (isAutoPlatform() && mWifiManager.isWifiApEnabled()) {
@@ -120,6 +208,7 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         Log.i(TAG, "checkAndInitHostapdVendorHal");
         qtiHostapdHal = new QtiHostapdHal();
         qtiHostapdHal.initialize();
+        qtiHostapdHal.registerWifiHalListener(mHalListener);
     }
 
     public void checkAndInitCfrHal() {
@@ -135,6 +224,7 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         if (!qtiSupplicantStaIfaceHal.setupVendorIface("wlan0")) {
             Log.e(TAG, "Failed to setup iface in supplicant on wlan0");
         }
+        qtiSupplicantStaIfaceHal.registerWifiHalListener(mHalListener);
     }
 
     private final BroadcastReceiver mQtiReceiver = new BroadcastReceiver() {
@@ -196,6 +286,34 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
            return true;
         }
         return false;
+    }
+
+    public void registerVendorEventCallback(IVendorEventCallback callback,
+            int callbackIdentifier) {
+        // verify arguments
+        if (callback == null) {
+            throw new IllegalArgumentException("Callback must not be null");
+        }
+        enforceAccessPermission();
+        if (DBG) {
+            Log.i(TAG, "registerVendorEventCallback uid=%" + Binder.getCallingUid());
+        }
+        synchronized(mVendorEventCallbacks) {
+            mVendorEventCallbacks.register(callback);
+            mVendorEventCallbacksMap.put(callbackIdentifier, callback);
+        }
+    }
+
+    public void unregisterVendorEventCallback(int callbackIdentifier) {
+        if (DBG) {
+            Log.i(TAG, "registerVendorEventCallback uid=%" + Binder.getCallingUid());
+        }
+        enforceAccessPermission();
+        synchronized(mVendorEventCallbacks) {
+            IVendorEventCallback callback = mVendorEventCallbacksMap.get(callbackIdentifier);
+            mVendorEventCallbacks.unregister(callback);
+            mVendorEventCallbacksMap.remove(callbackIdentifier);
+        }
     }
 
     public List<String> getAvailableInterfaces() {

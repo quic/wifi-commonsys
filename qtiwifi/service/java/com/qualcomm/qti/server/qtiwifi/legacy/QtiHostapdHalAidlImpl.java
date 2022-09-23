@@ -4,6 +4,7 @@
  */
 
 package com.qualcomm.qti.server.qtiwifi;
+import com.qualcomm.qti.server.qtiwifi.QtiWifiServiceImpl.WifiHalListener;
 
 /**
  * HAL calls to set up/tear down the hostapd daemon and make requests
@@ -33,7 +34,10 @@ public class QtiHostapdHalAidlImpl implements IQtiHostapdHal {
     }
 
     public String[] listVendorInterfaces() {
-            return null;
+        return null;
+    }
+
+    public void registerWifiHalListener(WifiHalListener listener) {
     }
 }
 

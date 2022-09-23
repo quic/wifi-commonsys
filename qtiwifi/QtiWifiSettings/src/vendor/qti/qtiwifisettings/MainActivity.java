@@ -64,6 +64,7 @@ import java.util.List;
 
 import android.net.wifi.WifiManager;
 import com.qualcomm.qti.qtiwifi.QtiWifiManager;
+import com.qualcomm.qti.qtiwifi.ThermalData;
 
 public class MainActivity extends Activity implements View.OnClickListener {
 
@@ -75,12 +76,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private Button buttonCommand;
     private EditText editTextCommand;
     private TextView textViewCommand;
+    private TextView eventViewCommand;
     private WifiManager mWifiManager;
     private static QtiWifiManager mUniqueInstance = null;
     private FileOutputStream fileout;
     private OutputStreamWriter outputWriter;
 
     private static final String COMMAND_GET_AVAILABLE_INTERFACES = "list-interfaces";
+    private static final String COMMAND_GET_THERMAL_INFO = "get-thermal-info";
+    private static final String COMMAND_REGISTER_VENDOR_EVENT_CALLBACK =
+                                                 "register-vendor-event-callback";
+    private static final String COMMAND_UNREGISTER_VENDOR_EVENT_CALLBACK =
+                                                 "unregister-vendor-event-callback";
     private static final String COMMAND_RESULT_FAILED = "FAILED";
     private static final String COMMAND_RESULT_SUCCESS = "SUCCESS";
     private static final String COMMAND_RESULT_INVALID_COMMAND = "Invalid command!";
@@ -100,6 +107,16 @@ public class MainActivity extends Activity implements View.OnClickListener {
             } catch (IOException e) {
                 Log.e(TAG, "Error while writing into the file");
             }
+        }
+    };
+
+    private QtiWifiManager.VendorEventCallback mVendorEventCallback =
+        new QtiWifiManager.VendorEventCallback() {
+        @Override
+        public void onThermalChanged(String ifname, int level) {
+            //ignore ifname as we don't care
+            Log.i(TAG, "onThermalChanged, level = " + level);
+            eventViewCommand.setText("Received thermal change event: level=" + level);
         }
     };
 
@@ -130,14 +147,17 @@ public class MainActivity extends Activity implements View.OnClickListener {
         buttonCommand = (Button) findViewById(R.id.buttonCommand);
         editTextCommand = (EditText) findViewById(R.id.editTextCommand);
         textViewCommand = (TextView) findViewById(R.id.textViewCommand);
+        eventViewCommand = (TextView) findViewById(R.id.eventViewCommand);
         buttonCommand.setOnClickListener(this);
         textViewCommand.setMovementMethod(ScrollingMovementMethod.getInstance());
+        eventViewCommand.setMovementMethod(ScrollingMovementMethod.getInstance());
 
         ViewGroup layout = (ViewGroup) buttonCommand.getParent();
         if (!isAutoPlatform()) {
             layout.removeView(buttonCommand);
             layout.removeView(editTextCommand);
             layout.removeView(textViewCommand);
+            layout.removeView(eventViewCommand);
         } else {
             layout.removeView(buttonStart);
             layout.removeView(buttonStop);
@@ -197,6 +217,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 if (ifaces != null) {
                     reply = ifaces.toString();
                 }
+            } else if (params[0].equals(COMMAND_GET_THERMAL_INFO)) {
+                reply = getThermalInfo(params);
+            } else if (params[0].equals(COMMAND_REGISTER_VENDOR_EVENT_CALLBACK)) {
+                mUniqueInstance.registerVendorEventCallback(mVendorEventCallback, null);
+                reply = "OK";
+            } else if (params[0].equals(COMMAND_UNREGISTER_VENDOR_EVENT_CALLBACK)) {
+                mUniqueInstance.unregisterVendorEventCallback(mVendorEventCallback);
+                reply = "OK";
             } else {
                 reply = COMMAND_RESULT_INVALID_COMMAND;
             }
@@ -207,6 +235,19 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     private boolean isAutoPlatform() {
         return getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE);
+    }
+
+    private String getThermalInfo(String[] params) {
+        if (params.length < 2) {
+            return COMMAND_RESULT_INVALID_ARGS;
+        }
+        ThermalData data = mUniqueInstance.getThermalInfo(params[1]);
+        if (data == null) {
+            return COMMAND_RESULT_FAILED;
+        }
+        String reply = "temperature=" + data.getTemperature()
+                     + " level="+ data.getThermalLevel();
+        return reply;
     }
 
     public static void unbindService(Context context) {

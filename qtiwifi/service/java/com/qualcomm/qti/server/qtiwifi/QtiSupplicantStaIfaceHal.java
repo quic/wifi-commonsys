@@ -58,6 +58,8 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.qualcomm.qti.server.qtiwifi.QtiWifiServiceImpl.WifiHalListener;
+
 public class QtiSupplicantStaIfaceHal {
     private static final String TAG = "QtiSupplicantStaIfaceHal";
 
@@ -144,6 +146,11 @@ public class QtiSupplicantStaIfaceHal {
         }
     }
 
+    /**
+     * List available STA interfaces
+     *
+     * @return active STA instances
+     */
     public String[] listVendorInterfaces() {
         synchronized (mLock) {
             if (mQtiStaIfaceHal == null) {
@@ -151,6 +158,15 @@ public class QtiSupplicantStaIfaceHal {
                 return null;
             }
             return mQtiStaIfaceHal.listVendorInterfaces();
+        }
+    }
+
+    /**
+     * Register Hal listener for vendor events
+     */
+    public void registerWifiHalListener(WifiHalListener listener) {
+        synchronized (mLock) {
+            mQtiStaIfaceHal.registerWifiHalListener(listener);
         }
     }
 }

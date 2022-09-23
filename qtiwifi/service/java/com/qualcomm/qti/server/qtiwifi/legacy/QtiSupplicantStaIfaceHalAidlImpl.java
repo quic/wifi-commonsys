@@ -19,6 +19,7 @@ import android.os.ServiceSpecificException;
 import android.util.Log;
 
 import com.qualcomm.qti.server.qtiwifi.util.GeneralUtil.Mutable;
+import com.qualcomm.qti.server.qtiwifi.QtiWifiServiceImpl.WifiHalListener;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -301,6 +302,10 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
             }
             return null;
         }
+    }
+
+    public void registerWifiHalListener(WifiHalListener listener) {
+        //not implement
     }
 }
 

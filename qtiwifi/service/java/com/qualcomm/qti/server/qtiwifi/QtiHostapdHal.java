@@ -28,6 +28,8 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.qualcomm.qti.server.qtiwifi.QtiWifiServiceImpl.WifiHalListener;
+
 public class QtiHostapdHal {
     private static final String TAG = "QtiHostapdHal";
 
@@ -112,6 +114,15 @@ public class QtiHostapdHal {
                 return null;
             }
             return mQtiHostapdHal.listVendorInterfaces();
+        }
+    }
+
+    /**
+     * Register Hal listener for vendor events
+     */
+    public void registerWifiHalListener(WifiHalListener listener) {
+        synchronized (mLock) {
+            mQtiHostapdHal.registerWifiHalListener(listener);
         }
     }
 }

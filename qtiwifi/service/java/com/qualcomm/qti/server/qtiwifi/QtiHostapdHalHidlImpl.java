@@ -5,6 +5,8 @@
 
 package com.qualcomm.qti.server.qtiwifi;
 
+import com.qualcomm.qti.server.qtiwifi.QtiWifiServiceImpl.WifiHalListener;
+
 /**
  * HAL calls to set up/tear down the hostapd daemon and make requests
  * related to station mode. Uses the Vendor AIDL hostapd interface.
@@ -45,6 +47,12 @@ public class QtiHostapdHalHidlImpl implements IQtiHostapdHal {
      */
     public String[] listVendorInterfaces() {
         return null;
+    }
+
+    /**
+     * Register Hal listener for vendor events
+     */
+    public void registerWifiHalListener(WifiHalListener listener) {
     }
 }
 

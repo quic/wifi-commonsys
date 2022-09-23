@@ -20,12 +20,15 @@ import android.os.ServiceSpecificException;
 import android.util.Log;
 
 import com.qualcomm.qti.server.qtiwifi.util.GeneralUtil.Mutable;
+import com.qualcomm.qti.server.qtiwifi.QtiWifiServiceImpl.WifiHalListener;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * HAL calls to set up/tear down the supplicant daemon and make requests
@@ -38,6 +41,7 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
     private final Object mLock = new Object();
     private String mVendorIfaceName = null;
     private Set<String> mActiveInterfaces = new HashSet<>();
+    private WifiHalListener mWifiHalListener;
 
     // Supplicant AIDL interface objects
     private ISupplicantVendor mISupplicantVendor = null;
@@ -53,10 +57,27 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
         }
     }
 
+    public void registerWifiHalListener(WifiHalListener listener) {
+        mWifiHalListener = listener;
+    }
+
     private class SupplicantVendorStaIfaceCallback extends ISupplicantVendorStaIfaceCallback.Stub {
         @Override
         public void onCtrlEvent(String ifaceName, String eventStr) {
             Log.i(TAG, ifaceName + ": " + eventStr);
+            if (eventStr == null) return;
+            if (mWifiHalListener == null) return;
+
+            // CTRL-EVENT-THERMAL-CHANGED level=3
+            if (eventStr.startsWith(QtiWifiServiceImpl.THERMAL_EVENT_STR)) {
+                    Matcher match = QtiWifiServiceImpl.THERMAL_PATTERN.matcher(eventStr);
+                if (match.find()) {
+                    int level = Integer.parseInt(match.group(1));
+                    mWifiHalListener.onThermalChanged(ifaceName, level);
+                } else {
+                    Log.e(TAG, "Could not parse event=" + eventStr);
+                }
+            }
         }
 
         @Override

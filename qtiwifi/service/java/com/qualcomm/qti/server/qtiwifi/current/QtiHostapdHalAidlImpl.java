@@ -19,7 +19,10 @@ import android.os.ServiceSpecificException;
 import android.util.Log;
 
 import com.qualcomm.qti.server.qtiwifi.util.GeneralUtil.Mutable;
+import com.qualcomm.qti.server.qtiwifi.QtiWifiServiceImpl.WifiHalListener;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * HAL calls to set up/tear down the hostapd daemon and make requests
@@ -37,16 +40,36 @@ public class QtiHostapdHalAidlImpl implements IQtiHostapdHal {
     private boolean mServiceDeclared = false;
     private String mVendorIfaceName = null;
     private Set<String> mActiveInterfaces;
+    private WifiHalListener mWifiHalListener;
 
     // hostapd AIDL interface objects
     private IHostapdVendor mIHostapdVendor = null;
     private HostapdDeathRecipient mHostapdVendorDeathRecipient;
 
+    /**
+     * Register Hal listener for vendor events
+     */
+    public void registerWifiHalListener(WifiHalListener listener) {
+        mWifiHalListener = listener;
+    }
 
     private class HostapdVendorCallback extends IHostapdVendorCallback.Stub {
         @Override
         public void onCtrlEvent(String ifaceName, String eventStr) {
             Log.i(TAG, ifaceName + ": " + eventStr);
+            if (eventStr == null) return;
+            if (mWifiHalListener == null) return;
+
+            // CTRL-EVENT-THERMAL-CHANGED level=3
+            if (eventStr.startsWith(QtiWifiServiceImpl.THERMAL_EVENT_STR)) {
+                    Matcher match = QtiWifiServiceImpl.THERMAL_PATTERN.matcher(eventStr);
+                if (match.find()) {
+                    int level = Integer.parseInt(match.group(1));
+                    mWifiHalListener.onThermalChanged(ifaceName, level);
+                } else {
+                    Log.e(TAG, "Could not parse event=" + eventStr);
+                }
+            }
         }
 
         @Override
@@ -152,6 +175,8 @@ public class QtiHostapdHalAidlImpl implements IQtiHostapdHal {
                 return false;
             }
             serviceBinder.linkToDeath(mHostapdVendorDeathRecipient, /* flags= */  0);
+            IHostapdVendorCallback callback = new HostapdVendorCallback();
+            mIHostapdVendor.registerHostapdVendorCallback(callback);
             return true;
         } catch (RemoteException e) {
             handleRemoteException(e, methodStr);

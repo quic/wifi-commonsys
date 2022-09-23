@@ -5,6 +5,8 @@
 
 package com.qualcomm.qti.server.qtiwifi;
 
+import com.qualcomm.qti.server.qtiwifi.QtiWifiServiceImpl.WifiHalListener;
+
 /** Abstraction of Qti Hostapd HAL interface */
 interface IQtiHostapdHal {
     /**
@@ -30,4 +32,9 @@ interface IQtiHostapdHal {
      * @return active SAP instances
      */
     String[] listVendorInterfaces();
+
+    /**
+     * Register Hal listener for vendor events
+     */
+    void registerWifiHalListener(WifiHalListener listener);
 }
