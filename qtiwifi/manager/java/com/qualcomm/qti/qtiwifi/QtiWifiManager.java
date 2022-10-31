@@ -185,6 +185,23 @@ public class QtiWifiManager {
     }
 
     /**
+     * Set TX power limitation in dBm.
+     *
+     * @param ifname Name of the interface.
+     * @param dbm TX power in dBm.
+     * @return Results of setTxPower.
+     *
+     * @throws IllegalArgumentException if ifname is null.
+     */
+    public boolean setTxPower(String ifname, int dbm) {
+        try {
+            return mService.setTxPower(ifname, dbm);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Base class for Csi callback. Should be extended by applications and set when calling
      * {@link QtiWifiManager#registerCsiCallback(CsiCallback, Handler)}.
      *

@@ -88,6 +88,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                                                  "register-vendor-event-callback";
     private static final String COMMAND_UNREGISTER_VENDOR_EVENT_CALLBACK =
                                                  "unregister-vendor-event-callback";
+    private static final String COMMAND_SET_TXPOWER = "set-txpower";
     private static final String COMMAND_RESULT_FAILED = "FAILED";
     private static final String COMMAND_RESULT_SUCCESS = "SUCCESS";
     private static final String COMMAND_RESULT_INVALID_COMMAND = "Invalid command!";
@@ -225,6 +226,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
             } else if (params[0].equals(COMMAND_UNREGISTER_VENDOR_EVENT_CALLBACK)) {
                 mUniqueInstance.unregisterVendorEventCallback(mVendorEventCallback);
                 reply = "OK";
+            } else if (params[0].equals(COMMAND_SET_TXPOWER)) {
+                reply = setTxPower(params);
             } else {
                 reply = COMMAND_RESULT_INVALID_COMMAND;
             }
@@ -248,6 +251,21 @@ public class MainActivity extends Activity implements View.OnClickListener {
         String reply = "temperature=" + data.getTemperature()
                      + " level="+ data.getThermalLevel();
         return reply;
+    }
+
+    private String setTxPower(String[] params) {
+        if (params.length < 3) {
+            return COMMAND_RESULT_INVALID_ARGS;
+        }
+
+        String ifname = params[1];
+        int dbm = Integer.parseInt(params[2]);
+        boolean res = mUniqueInstance.setTxPower(ifname, dbm);
+        if (!res) {
+            return COMMAND_RESULT_FAILED;
+        }
+
+        return COMMAND_RESULT_SUCCESS;
     }
 
     public static void unbindService(Context context) {

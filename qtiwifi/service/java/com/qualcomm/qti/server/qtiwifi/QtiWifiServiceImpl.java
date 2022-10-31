@@ -121,6 +121,42 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
         return thermalData;
     }
 
+    /**
+     * Set TX power limitation in dBm.
+     *
+     * @param ifname Name of the interface.
+     * @param dbm TX power in dBm.
+     * @return Results of setTxPower.
+     *
+     * @throws IllegalArgumentException if ifname is null.
+     */
+    public boolean setTxPower(String ifname, int dbm) {
+        if (ifname == null) {
+            throw new IllegalArgumentException("ifname cannot be null");
+        }
+
+        //vendor requirement to limit max tx power >= 8dBm.
+        if (dbm < 8) {
+            Log.e(TAG, "Expecting max tx power limit >= 8 dBm, while actual dBm=" + dbm);
+            return false;
+        }
+
+        final String kSetTxPowerCmd = "SET_TXPOWER " + dbm;
+        String reply;
+
+        Log.v(TAG, "setTxPower: ifname=" + ifname + " TX power=" + dbm);
+        if (isSupplicantIface(ifname)) {
+            reply = qtiSupplicantStaIfaceHal.doDriverCmd(kSetTxPowerCmd);
+        } else if (isHostapdIface(ifname)) {
+            reply = qtiHostapdHal.doDriverCmd(ifname, kSetTxPowerCmd);
+        } else {
+            Log.e(TAG, "Invalid ifame:" + ifname);
+            return false;
+        }
+
+        return setSuccess(reply);
+    }
+
     // Defined to be used by Hal
     public interface WifiHalListener {
         void onThermalChanged(String ifname, int level);
