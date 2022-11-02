@@ -97,17 +97,17 @@ public class QtiSupplicantStaIfaceHal {
     }
 
     /**
-     * Wrapper function to create the ISupplicantStaIfaceHal object.
+     * Wrapper function to create the IQtiSupplicantStaIfaceHal object.
      * Created to be mockable in unit tests.
      */
     private IQtiSupplicantStaIfaceHal createVendorStaIfaceHalMockable() {
         synchronized (mLock) {
-            if (QtiSupplicantStaIfaceHalAidlImpl.serviceDeclared()) {
-                Log.i(TAG, "Initializing QtiSupplicantStaIfaceHal using AIDL implementation.");
-                return new QtiSupplicantStaIfaceHalAidlImpl();
-            } else if (QtiSupplicantStaIfaceHalHidlImpl.serviceDeclared()) {
+            if (QtiSupplicantStaIfaceHalHidlImpl.serviceDeclared()) {
                 Log.i(TAG, "Initializing QtiSupplicantStaIfaceHal using HIDL implementation.");
                 return new QtiSupplicantStaIfaceHalHidlImpl();
+            } else if (QtiSupplicantStaIfaceHalAidlImpl.serviceDeclared()) {
+                Log.i(TAG, "Initializing QtiSupplicantStaIfaceHal using AIDL implementation.");
+                return new QtiSupplicantStaIfaceHalAidlImpl();
             }
             Log.e(TAG, "No HIDL or AIDL service available for SupplicantStaIfaceHal.");
             return null;
