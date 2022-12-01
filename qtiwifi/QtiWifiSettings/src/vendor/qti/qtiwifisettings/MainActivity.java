@@ -258,11 +258,15 @@ public class MainActivity extends Activity implements View.OnClickListener {
             return COMMAND_RESULT_INVALID_ARGS;
         }
 
-        String ifname = params[1];
-        int dbm = Integer.parseInt(params[2]);
-        boolean res = mUniqueInstance.setTxPower(ifname, dbm);
-        if (!res) {
-            return COMMAND_RESULT_FAILED;
+        try {
+            String ifname = params[1];
+            int dbm = Integer.parseInt(params[2]);
+            boolean res = mUniqueInstance.setTxPower(ifname, dbm);
+            if (!res) {
+                return COMMAND_RESULT_FAILED;
+            }
+        } catch (NumberFormatException e) {
+            return COMMAND_RESULT_INVALID_ARGS;
         }
 
         return COMMAND_RESULT_SUCCESS;
