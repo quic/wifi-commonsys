@@ -35,6 +35,7 @@ package com.qualcomm.qti.qtiwifi;
 import com.qualcomm.qti.qtiwifi.ICsiCallback;
 import com.qualcomm.qti.qtiwifi.ThermalData;
 import com.qualcomm.qti.qtiwifi.IVendorEventCallback;
+import com.qualcomm.qti.qtiwifi.IQtiInterfaceCallback;
 
 interface IQtiWifiManager
 {
@@ -47,4 +48,8 @@ interface IQtiWifiManager
     void unregisterVendorEventCallback(in int callbackIdentifier);
     ThermalData getThermalInfo(String ifname);
     boolean setTxPower(String ifname, int dbm);
+    String getBssInfo();
+    String getStatsBssInfo(in byte[] MacAddress);
+    void registerCallback(in IBinder binder, in IQtiInterfaceCallback cb, int callbackIdentifier);
+    void unregisterCallback(int callbackIdentifier);
 }
