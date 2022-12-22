@@ -41,6 +41,7 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
 
     // Supplicant AIDL interface objects
     private ISupplicantVendor mISupplicantVendor = null;
+    private QtiSupplicantIface mQtiSupplicantIface;
     private Map<String, ISupplicantVendorStaIface> mISupplicantVendorStaIfaces = new HashMap<>();
     private SupplicantDeathRecipient mSupplicantVendorDeathRecipient;
     private class SupplicantDeathRecipient implements DeathRecipient {
@@ -53,7 +54,8 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
         }
     }
 
-    public QtiSupplicantStaIfaceHalAidlImpl() {
+    public QtiSupplicantStaIfaceHalAidlImpl(QtiSupplicantIface qtiSupplicantIface) {
+        mQtiSupplicantIface = qtiSupplicantIface;
         mSupplicantVendorDeathRecipient = new SupplicantDeathRecipient();
         Log.i(TAG, "QtiSupplicantStaIfaceHalAidlImpl() invoked");
     }
@@ -161,6 +163,7 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
                         final String methodStr = "getVendorInterface";
                         if (!checkSupplicantVendorAndLogFailure(methodStr)) return null;
                         mVendorIfaceName = ifaceInfo.name;
+                        mQtiSupplicantIface.setIfaceName(ifaceInfo.name);
                         supplicantVendorStaIface.value = mISupplicantVendor.getVendorInterface(ifaceInfo);
                     } catch (RemoteException e) {
                         Log.e(TAG, "ISupplicantVendor.getInterface exception: " + e);

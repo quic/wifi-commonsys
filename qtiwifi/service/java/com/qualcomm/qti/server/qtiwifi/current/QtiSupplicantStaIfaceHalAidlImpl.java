@@ -91,7 +91,7 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
         }
     }
 
-    public QtiSupplicantStaIfaceHalAidlImpl() {
+    public QtiSupplicantStaIfaceHalAidlImpl(QtiSupplicantIface qtiSupplicantIface) {
         mSupplicantVendorDeathRecipient = new SupplicantDeathRecipient();
         Log.i(TAG, "QtiSupplicantStaIfaceHalAidlImpl() invoked");
     }

@@ -67,9 +67,11 @@ public class QtiSupplicantStaIfaceHal {
 
     // Vendor HAL interface object - might be implemented by HIDL or AIDL
     private IQtiSupplicantStaIfaceHal mQtiStaIfaceHal;
+    private QtiSupplicantIface mQtiSupplicantIface;
 
-    public QtiSupplicantStaIfaceHal() {
+    public QtiSupplicantStaIfaceHal(QtiSupplicantIface qtiSupplicantIface) {
         Log.i(TAG, "constructor of QtiSupplicantStaIfaceHal called");
+        mQtiSupplicantIface = qtiSupplicantIface;
         mQtiStaIfaceHal = createVendorStaIfaceHalMockable();
         if (mQtiStaIfaceHal == null) {
             Log.e(TAG, "Failed to get internal ISupplicantVendorStaIfaceHal instance.");
@@ -104,10 +106,10 @@ public class QtiSupplicantStaIfaceHal {
         synchronized (mLock) {
             if (QtiSupplicantStaIfaceHalHidlImpl.serviceDeclared()) {
                 Log.i(TAG, "Initializing QtiSupplicantStaIfaceHal using HIDL implementation.");
-                return new QtiSupplicantStaIfaceHalHidlImpl();
+                return new QtiSupplicantStaIfaceHalHidlImpl(mQtiSupplicantIface);
             } else if (QtiSupplicantStaIfaceHalAidlImpl.serviceDeclared()) {
                 Log.i(TAG, "Initializing QtiSupplicantStaIfaceHal using AIDL implementation.");
-                return new QtiSupplicantStaIfaceHalAidlImpl();
+                return new QtiSupplicantStaIfaceHalAidlImpl(mQtiSupplicantIface);
             }
             Log.e(TAG, "No HIDL or AIDL service available for SupplicantStaIfaceHal.");
             return null;

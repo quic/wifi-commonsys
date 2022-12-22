@@ -48,7 +48,7 @@ import com.qualcomm.qti.server.qtiwifi.QtiWifiServiceImpl.WifiHalListener;
  * sending requests to the supplicant daemon
  */
 public class QtiSupplicantStaIfaceHalHidlImpl implements IQtiSupplicantStaIfaceHal {
-    private static final String TAG = "QtiSupplicantStaIfaceHalHidlImp";
+    private static final String TAG = "QtiSupplicantStaIfaceHalHidlImpl";
     public static final String HAL_INSTANCE_NAME = "default";
 
     private final Object mLock = new Object();
@@ -56,6 +56,7 @@ public class QtiSupplicantStaIfaceHalHidlImpl implements IQtiSupplicantStaIfaceH
     // Supplicant HAL interface objects
     private IServiceManager mIServiceManager = null;
     private ISupplicantVendor mISupplicantVendor;
+    private QtiSupplicantIface mQtiSupplicantIface;
     private HashMap<String, ISupplicantVendorStaIface> mISupplicantVendorStaIfaces = new HashMap<>();
 
     private final IServiceNotification mServiceNotificationCallback =
@@ -105,6 +106,10 @@ public class QtiSupplicantStaIfaceHalHidlImpl implements IQtiSupplicantStaIfaceH
             }
             return true;
         }
+    }
+
+    public QtiSupplicantStaIfaceHalHidlImpl(QtiSupplicantIface qtiSupplicantIface) {
+        mQtiSupplicantIface = qtiSupplicantIface;
     }
 
     /**
