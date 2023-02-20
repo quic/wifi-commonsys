@@ -52,7 +52,6 @@
 
     <application
         android:allowBackup="false"
-        android:persistent="true"
         android:label="@string/app_name"
         android:icon="@mipmap/icon"
         android:supportsRtl="true">
