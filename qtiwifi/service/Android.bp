@@ -44,6 +44,7 @@ android_app {
            "java/com/qualcomm/qti/server/qtiwifi/IQtiWifiCsiHal.java",
            "java/com/qualcomm/qti/server/qtiwifi/QtiWifiCsiHal.java",
            "java/com/qualcomm/qti/server/qtiwifi/QtiWifiCsiHalHidlImpl.java",
+           "java/com/qualcomm/qti/server/qtiwifi/QtiWifiCsiHalAidlImpl.java",
            "java/com/qualcomm/qti/server/qtiwifi/QtiHostapdHalHidlImpl.java",
            "java/com/qualcomm/qti/server/qtiwifi/QtiHostapdHal.java",
            "java/com/qualcomm/qti/server/qtiwifi/QtiSupplicantStaIfaceHalHidlImpl.java",
@@ -69,6 +70,7 @@ android_app {
                  "android.hardware.wifi.supplicant-V1.4-java",
                  "vendor.qti.hardware.wifi.supplicant-V2.2-java",
                  // AIDL
+                 "vendor.qti.hardware.wifi.wificfr-V1-java",
                  "android.hardware.wifi.supplicant-V1-java",
                  "android.hardware.wifi-V1.6-java",
                  "android.hidl.manager-V1.2-java"
