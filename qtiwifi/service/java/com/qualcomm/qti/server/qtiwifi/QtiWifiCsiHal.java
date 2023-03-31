@@ -63,6 +63,9 @@ public class QtiWifiCsiHal {
             if (QtiWifiCsiHalHidlImpl.serviceDeclared()) {
                 Log.i(TAG, "Initializing QtiWifiCsiHalHidlImpl using HIDL implementation.");
                 return new QtiWifiCsiHalHidlImpl();
+            } else if (QtiWifiCsiHalAidlImpl.serviceDeclared()) {
+                Log.i(TAG, "Initializing QtiWifiCsiHalHidlImpl using AIDL implementation.");
+                return new QtiWifiCsiHalAidlImpl();
             }
             Log.e(TAG, "No HIDL or AIDL service available for QtiWifiCsiHal.");
             return null;

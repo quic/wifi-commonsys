@@ -80,6 +80,7 @@ public class QtiWifiCsiHalHidlImpl implements IQtiWifiCsiHal {
         @Override
         public void onCfrDataAvailable(ArrayList<Byte> info) {
             Log.i(TAG, "onCfrDataAvailable called");
+
             if (mCsiCallback != null) {
                 try {
                     byte[] byteArray = new byte[(info).size()];
@@ -107,6 +108,7 @@ public class QtiWifiCsiHalHidlImpl implements IQtiWifiCsiHal {
             synchronized (mLock) {
                 Log.i(TAG, "IServiceNotification.onRegistration for: " + fqName
                         + ", " + name + " preexisting=" + preexisting);
+
                 if (!initIWifiCfrService()) {
                     Log.e(TAG, "initializing WifiCfr failed.");
                     wifiCfrServiceDiedHandler();
