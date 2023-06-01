@@ -19,6 +19,11 @@ interface IQtiSupplicantStaIfaceHal {
     boolean initialize();
 
     /**
+     * Signals whether initialization started successfully.
+     */
+    boolean isInitializationStarted();
+
+    /**
      * Setup a STA interface for the specified iface name.
      *
      * @param ifaceName Name of the interface.

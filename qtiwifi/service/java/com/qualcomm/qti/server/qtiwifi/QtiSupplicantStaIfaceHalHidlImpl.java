@@ -108,6 +108,12 @@ public class QtiSupplicantStaIfaceHalHidlImpl implements IQtiSupplicantStaIfaceH
         }
     }
 
+    public boolean isInitializationStarted() {
+        synchronized (mLock) {
+             return mIServiceManager != null;
+        }
+    }
+
     public QtiSupplicantStaIfaceHalHidlImpl(QtiSupplicantIface qtiSupplicantIface) {
         mQtiSupplicantIface = qtiSupplicantIface;
     }

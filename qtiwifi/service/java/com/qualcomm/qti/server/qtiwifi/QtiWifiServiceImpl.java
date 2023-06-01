@@ -284,7 +284,8 @@ public final class QtiWifiServiceImpl extends IQtiWifiManager.Stub {
 
     public void checkAndInitSupplicantStaIfaceHal() {
         Log.i(TAG, "checkAndInitSupplicantStaIfaceHal");
-        mQtiSupplicantStaIfaceHal.initialize();
+        if (!mQtiSupplicantStaIfaceHal.isInitializationStarted())
+            mQtiSupplicantStaIfaceHal.initialize();
         if (!mQtiSupplicantStaIfaceHal.setupVendorIface("wlan0")) {
             Log.e(TAG, "Failed to setup iface in supplicant on wlan0");
         }

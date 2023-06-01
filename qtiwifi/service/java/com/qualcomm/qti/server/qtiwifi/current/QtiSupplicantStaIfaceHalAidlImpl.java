@@ -41,6 +41,7 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
     private final Object mLock = new Object();
     private String mVendorIfaceName = null;
     private Set<String> mActiveInterfaces = new HashSet<>();
+    private boolean mServiceDeclared = false;
     private WifiHalListener mWifiHalListener;
 
     // Supplicant AIDL interface objects
@@ -110,7 +111,17 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
             Log.i(TAG, "Checking for ISupplicant service.");
             mISupplicantVendorStaIfaces.clear();
             getSupplicantVendorInstance();
-            return serviceDeclared();
+            mServiceDeclared = serviceDeclared();
+            return mServiceDeclared;
+        }
+    }
+
+    /**
+     * Signals whether initialization started successfully.
+     */
+    public boolean isInitializationStarted() {
+        synchronized (mLock) {
+            return mServiceDeclared;
         }
     }
 
@@ -244,6 +255,7 @@ public class QtiSupplicantStaIfaceHalAidlImpl implements IQtiSupplicantStaIfaceH
         synchronized (mLock) {
             mISupplicantVendor = null;
             mISupplicantVendorStaIfaces.clear();
+            mServiceDeclared = false;
         }
     }
 

@@ -99,6 +99,20 @@ public class QtiSupplicantStaIfaceHal {
     }
 
     /**
+     * Signals whether initialization started successfully.
+     */
+
+    public boolean isInitializationStarted() {
+        synchronized (mLock) {
+            if (mQtiStaIfaceHal == null) {
+                Log.e(TAG, "Internal mQtiStaIfaceHal instance does not exist.");
+                return false;
+            }
+            return mQtiStaIfaceHal.isInitializationStarted();
+        }
+    }
+
+    /**
      * Wrapper function to create the IQtiSupplicantStaIfaceHal object.
      * Created to be mockable in unit tests.
      */
