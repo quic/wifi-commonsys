@@ -22,3 +22,7 @@ To use this APK below are the libs, permission files and the QtiWifiservice shal
 * android.hidl.base-V1.0-java
 * android.hidl.manager-V1.0-java
 * qti_supplicant_interface.xml(permission file)
+
+##  License Information
+
+This project is licensed under the [BSD-3-Clause License](https://spdx.org/licenses/BSD-3-Clause.html). For the full license text, please refer to the [LICENSE](LICENSE) file in this repository.
