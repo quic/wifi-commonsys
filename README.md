@@ -25,4 +25,4 @@ To use this APK below are the libs, permission files and the QtiWifiservice shal
 
 ##  License Information
 
-This project is licensed under the [BSD 3-Clause Clear](https://spdx.org/licenses/BSD-3-Clause-Clear.html). For the full license text, please refer to the [LICENSE](LICENSE) file in this repository.
+This project is licensed under the [BSD-3-Clause-Clear](https://spdx.org/licenses/BSD-3-Clause-Clear.html). For the full license text, please refer to the [LICENSE](LICENSE) file in this repository.
